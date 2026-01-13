@@ -90,7 +90,7 @@ def read_gps(ser , max_wait , stale_secs):
         return None
 
     except Exception as e:
-        print(f"[GPS] Parsing Error {datetime.now().strftime("%H:%M:%S")} " , e)
+        print(f"[GPS Parsing Error] {datetime.now().strftime("%H:%M:%S")} " , e)
         return None
 
 def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
