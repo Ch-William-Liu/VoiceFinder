@@ -67,7 +67,7 @@ def read_gps(ser , max_wait , stale_secs):
                         return None
                     
                     if "$GPGGA" in line:
-                        if line.startwith("%GPS:"):
+                        if line.startswith("%GPS:"):
                             line = line.replace("%GPS:","").strip()
 
                         parts = line.split(",")
