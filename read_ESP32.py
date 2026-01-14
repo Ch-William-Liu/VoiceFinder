@@ -36,17 +36,17 @@ class ESPHeadingReader:
 
     def _parse_csv_line(self , line : str):
         if not line:
-            print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} Receive Error")
+            print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Receive Error")
             return None
         
         if ("ESP32" in line) or ("MPU-6050" in line) or ("HMC-5883L" in line) or ("DS3231" in line):
-            print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} Initialize message: " , line)
+            print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Initialize message: " , line)
             return None
         
         parts = [p.strip() for p in line.split(",")]
 
         if len(parts) < 15:
-            print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} Incomplete message: " , line)
+            print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Incomplete message: " , line)
             return None
         
         ts = parts[0]
@@ -54,7 +54,7 @@ class ESPHeadingReader:
         try:
             nums = [float(x) for x in parts[1 : 15]]
         except ValueError as e:
-            print(f"[ESP32 Parsing Error] {datetime.now().strftime("%H:%M:%S")}: " , e)
+            print(f"[ESP32 Parsing Error] {datetime.now().strftime('%H:%M:%S')}: " , e)
 
         row = [ts] + nums
         return row
@@ -65,7 +65,7 @@ class ESPHeadingReader:
             w.writerow(row)
 
     def _reader_loop(self):
-        print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} Reader thread start...")
+        print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Reader thread start...")
         while not self.stop_event.is_set():
             try:
                 raw = self.ser.readline()
@@ -87,15 +87,15 @@ class ESPHeadingReader:
                     self.buffer.append(heading_comp)
 
             except Exception as e:
-                print(f"[ESP32 Reader Error] {datetime.now().strftime("%H:%M:%S")}: " , e)
+                print(f"[ESP32 Reader Error] {datetime.now().strftime('%H:%M:%S')}: " , e)
                 time.sleep(0.2)
 
-        print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} Reader thread stop")
+        print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Reader thread stop")
 
     def get_mean(self , n : int = 50):
         with self.lock:
             if not self.buffer:
-                print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} There is nothing in buffer.")
+                print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} There is nothing in buffer.")
                 return -180
             data = list(self.buffer)[-n :]
         return sum(data) / len(data)
@@ -103,7 +103,7 @@ class ESPHeadingReader:
     def get_latest(self):
         with self.lock:
             if not self.buffer:
-                print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} There is nothing in buffer.")
+                print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} There is nothing in buffer.")
                 return -180
             return self.buffer[-1]
         
@@ -113,6 +113,6 @@ class ESPHeadingReader:
         try:
             if self.ser and self.ser.is_open:
                 self.ser.close()
-                print(f"[ESP32] {datetime.now().strftime("%H:%M:%S")} Reader close.")
+                print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Reader close.")
         except Exception:
             pass
