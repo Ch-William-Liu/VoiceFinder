@@ -125,8 +125,8 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
             min_code = 1
 
             # --- Check and clear msg_id befor sending ---
-            momc_cmd = f"AT%MOMC=VF{msg_id}\r"
-            momd_cmd = f"AT%MOMD=VF{msg_id}\r"
+            momc_cmd = f"AT%MOMC=VF{msg_id:03}\r"
+            momd_cmd = f"AT%MOMD=VF{msg_id:03}\r"
 
             print(f"[AT] {datetime.now().strftime("%H:%M:%S")} Sending: {momc_cmd.strip()}")
             ser.write(momc_cmd.encode("utf-8"))

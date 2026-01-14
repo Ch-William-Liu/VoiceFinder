@@ -27,7 +27,7 @@ serST6100 = serial.Serial(port = "/dev/ttyUSB0" , baudrate = 9600 , timeout = 1)
 serESP = serial.Serial(port = "/dev/serial0" , baudrate = 115200 , timeout = 1)
 
 DONE_GPIO = 27                                      # goes to PIN34 on ESP32
-RUN_DURATION = 150                                  # take 150 second as test
+RUN_DURATION = 60                                   # take 60 second as test
 RED_LED = 17                                        # RED LED pin indicate that Raspberry is booted
 
 GPIO.setmode(GPIO.BCM)
@@ -252,7 +252,7 @@ def main():
     start_time = time.time()
 
     closeFlag = False
-
+    msgcount = 0
     try:
         while not closeFlag:
             print("\n")
@@ -278,6 +278,10 @@ def main():
             print(f"Saving audio file as {audioFilename}")
             sf.write(audioFilename , myAudio , fs , subtype = "PCM_16")
             del(myAudio)
+
+            msg_to_send = f"{cal_mean_angle : 3.2f},{sensor_angle : 3.2f},{true_angle : 3.2f}"
+            st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
+            print("[Pi] Sending message from Pi.")
             print("=" * 50)
             elasped_time = time.time() - start_time
             if elasped_time >= RUN_DURATION:
