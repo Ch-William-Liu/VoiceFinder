@@ -17,16 +17,16 @@ def get_gps_info(ser , retries , wait_time , stale_secs):
     :return: (latitude_raw , lat_dir , longitude_raw , lon_dir) or None
     '''
     for attempt in range(1 , retries + 1):
-        print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Attempt {attempt}")
+        print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Attempt {attempt}")
         result = read_gps(ser , max_wait = wait_time ,stale_secs = stale_secs)
         if result:
-            print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Success: {result}")
+            print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Success: {result}")
             return result
         else:
-            print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Attempt {attempt} failed")
+            print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Attempt {attempt} failed")
             time.sleep(1)
 
-    print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Exceeded maximum attempts, still no GPGGA found")
+    print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Exceeded maximum attempts, still no GPGGA found")
     return None
 
 def read_gps(ser , max_wait , stale_secs):
@@ -41,7 +41,7 @@ def read_gps(ser , max_wait , stale_secs):
     '''
     try:
         command = f'AT%GPS={stale_secs},{max_wait},"GGA"\r'
-        print(f"[AT] {datetime.now().strftime("%H:%M:%S")} Sending GPS conmand : {command.strip()}")
+        print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending GPS conmand : {command.strip()}")
         ser.write(command.encode("ascii"))
         time.sleep(0.5)                     # Wait for GPS module to start responding
 
@@ -63,7 +63,7 @@ def read_gps(ser , max_wait , stale_secs):
                         continue
 
                     if "ERROR" in line:
-                        print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Received ERROR")
+                        print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Received ERROR")
                         return None
                     
                     if "$GPGGA" in line:
@@ -72,7 +72,7 @@ def read_gps(ser , max_wait , stale_secs):
 
                         parts = line.split(",")
                         if len(parts) < 6:
-                            print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Incomplete message:" , line)
+                            print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Incomplete message:" , line)
                             continue
 
                         latitude_raw = parts[2]
@@ -86,11 +86,11 @@ def read_gps(ser , max_wait , stale_secs):
             else:
                 time.sleep(0.1)
 
-        print(f"[GPS] {datetime.now().strftime("%H:%M:%S")} Timeout: No GPGGA message found")
+        print(f"[GPS] {datetime.now().strftime('%H:%M:%S')} Timeout: No GPGGA message found")
         return None
 
     except Exception as e:
-        print(f"[GPS Parsing Error] {datetime.now().strftime("%H:%M:%S")} " , e)
+        print(f"[GPS Parsing Error] {datetime.now().strftime('%H:%M:%S')} " , e)
         return None
 
 def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
@@ -128,14 +128,14 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
             momc_cmd = f"AT%MOMC=VF{msg_id:03}\r"
             momd_cmd = f"AT%MOMD=VF{msg_id:03}\r"
 
-            print(f"[AT] {datetime.now().strftime("%H:%M:%S")} Sending: {momc_cmd.strip()}")
+            print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending: {momc_cmd.strip()}")
             ser.write(momc_cmd.encode("utf-8"))
             time.sleep(1.5)
             response = ser.read_all().decode(errors = "ignore").strip()
             if response:
                 print(f"[AT] Response: {response}")
             
-            print(f"[AT] {datetime.now().strftime("%H:%M:%S")} Sending: {momd_cmd.strip()}")
+            print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending: {momd_cmd.strip()}")
             ser.write(momd_cmd.encode("utf-8"))
             time.sleep(1.5)
             response = ser.read_all().decode(errors = "ignore").strip()
@@ -145,7 +145,7 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
             # Compose AT command
             at_command = f'AT%MOMT=VF{msg_id},{service_class},{lifetime},{msg_len},{data_format},{sin},{min_code},"{full_msg}"\r'
 
-            print(f"[AT] {datetime.now().strftime("%H:%M:%S")} Sending command: {at_command.strip()}")
+            print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending command: {at_command.strip()}")
             
             # Send AT%MOMT
             ser.write(at_command.encode("utf-8"))
@@ -156,7 +156,7 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
             for line in response.replace("\r" , "\n").split("\n"):
                 line = line.strip()
                 if line:
-                    print(f"[AT] {datetime.now().strftime("%H:%M:%S")} {line}")
+                    print(f"[AT] {datetime.now().strftime('%H:%M:%S')} {line}")
 
     except serial.SerialException as e:
         print(f"Serial error : {e}")
