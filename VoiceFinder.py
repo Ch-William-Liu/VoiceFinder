@@ -42,7 +42,7 @@ def checkSoundcard():
         os.system("sudo reboot")
         sys.exit(1)
 
-def recordSetup(device_name : str = "audininjector-octo-soundcard"):
+def recordSetup(device_name : str = "audioinjector-octo-soundcard"):
     '''
     set up function for audioinjector soundcard
     :param device_name: soundcard name
@@ -77,11 +77,25 @@ def multiRecord(channel : int = 8 , duration : float = 10.0):
 # ====================================
 # Declination 
 # ====================================
-def getLocalDeclination(lat , lon):
+def getLocalDeclination(lat : float , lon : float):
+    '''
+    use GPS coordinate from ST6100
+    :param lat: coodrinate from st6100 , ddmm.mmmm
+    :type lat: float
+    :param lon: coodrinate from st6100 , ddmm.mmmm
+    :type lon: float
+    '''
+    lat_d = int(lat // 100)
+    lat_m = lat % 100
+    lon_d = int(lon // 100)
+    lon_m = lon % 100
+
+    lat_format = lat_d + (lat_m / 60)
+    lon_format = lon_d + (lon_m / 60)
     alt_km = 0
     yearNow = datetime.now().year + (datetime.now().timetuple().tm_yday) / 365.0
     wmm = WMMv2()
-    dec = wmm.get_declination(lat , lon , yearNow , alt_km)
+    dec = wmm.get_declination(lat_format , lon_format , yearNow , alt_km)
 
     return dec
 
@@ -253,8 +267,8 @@ def main():
             audioFilename = timeNow + ".wav"
 
             currentCoordinate = st6100_send_msg.get_gps_info(serST6100 , retries = 20 , wait_time = 120 , stale_secs = 60)
-            localLat = float(currentCoordinate[0]) * 0.01
-            localLon = float(currentCoordinate[2]) * 0.01
+            localLat = float(currentCoordinate[0])      #ddmm.mmmm
+            localLon = float(currentCoordinate[2])      #ddmm.mmmm
 
             dec = getLocalDeclination(localLat , localLon)
 

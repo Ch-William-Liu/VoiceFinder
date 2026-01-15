@@ -41,17 +41,17 @@ def checkSoundcard():
     '''
     check soundcard every time program start
     '''
-    print("Checking Audioinjector Octo soundcard...")
+    print("[Pi] Checking Audioinjector Octo soundcard...")
     checkResult = subprocess.run(["arecord" , "-l"] , capture_output = True , text = True)
     stderr = checkResult.stderr.strip()
     stdout = checkResult.stdout.strip()
 
     if "no soundcards found" in stderr.lower():
-        print("No soundcard is found. System would reboot.")
+        print("[Pi] No soundcard is found. System would reboot.")
         os.system("sudo reboot")
         sys.exit(1)
 
-def recordSetup(device_name : str = "audininjector-octo-soundcard"):
+def recordSetup(device_name : str = "audioinjector-octo-soundcard"):
     '''
     set up function for audioinjector soundcard
     :param device_name: soundcard name
@@ -59,14 +59,14 @@ def recordSetup(device_name : str = "audininjector-octo-soundcard"):
     '''
     try:
         sd.default.device = device_name
-        print("Setting default record to Audioinjector Octo.")
+        print("[Pi] Setting default record to Audioinjector Octo.")
     except Exception as e:
         raise RuntimeError(f"Cannot set device to {device_name} , {e}")
-    print("Warm-up recording.")
+    print("[Pi] Warm-up recording.")
     sd.rec(int(5 * fs) , samplerate = fs , channels = 8)
     sd.wait()
     time.sleep(0.5)
-    print("Dummy recording done.")
+    print("[Pi] Dummy recording done.")
 
 def multiRecord(channel : int = 8 , duration : float = 10.0):
     '''
@@ -76,21 +76,35 @@ def multiRecord(channel : int = 8 , duration : float = 10.0):
     :param duration: duration of audio file
     :type duration: float
     '''
-    print(f"Start recording for {duration} second ...")
+    print(f"[Pi] Start recording for {duration} second ...")
     audio = sd.rec(int(duration * fs) , samplerate = fs , channels = channel , dtype = "float32")
     sd.wait()
-    print("Recorded.")
+    print("[Pi] Recorded.")
 
     return audio
 
 # ====================================
 # Declination 
 # ====================================
-def getLocalDeclination(lat , lon):
+def getLocalDeclination(lat : float , lon : float):
+    '''
+    use GPS coordinate from ST6100
+    :param lat: coodrinate from st6100 , ddmm.mmmm
+    :type lat: float
+    :param lon: coodrinate from st6100 , ddmm.mmmm
+    :type lon: float
+    '''
+    lat_d = int(lat // 100)
+    lat_m = lat % 100
+    lon_d = int(lon // 100)
+    lon_m = lon % 100
+
+    lat_format = lat_d + (lat_m / 60)
+    lon_format = lon_d + (lon_m / 60)
     alt_km = 0
     yearNow = datetime.now().year + (datetime.now().timetuple().tm_yday) / 365.0
     wmm = WMMv2()
-    dec = wmm.get_declination(lat , lon , yearNow , alt_km)
+    dec = wmm.get_declination(lat_format , lon_format , yearNow , alt_km)
 
     return dec
 
@@ -123,7 +137,7 @@ neighborPairs = [(1 , 2) , (2 , 4) , (1 , 3) , (3 , 4)]
 
 # function to calculate angle from TDOA
 def calculateAngle(delta_t , d , C , use_cos = False):
-    print("Calculating angle...")
+    print("[Pi] Calculating angle...")
     val = (delta_t * C) / d                 # calculate the value of trigonometric function
     val = np.clip(val , -1.0 , 1.0)        # clip the value to avoid error
     phiRad = math.acos(val) if use_cos else math.asin(val)    # calculate the angle in radian
@@ -268,11 +282,11 @@ def main():
 
             myAudio = multiRecord()
 
-            print("Proccessing audio file...")
+            print("[Pi] Proccessing audio file...")
             _ , _ , _ , cal_mean_angle , _ = processFile(myAudio)
             sensor_angle = esp.get_mean()
             true_angle = (cal_mean_angle + sensor_angle + dec) % 360
-            print("Processed.")
+            print("[Pi] Processed.")
             print(f"\nCal: {cal_mean_angle : 3.2f}\tSensor: {sensor_angle : 3.2f}\tTrue: {true_angle : 3.2f}")
             logCsv(timeNow , cal_mean_angle , sensor_angle , true_angle)
             print(f"Saving audio file as {audioFilename}")
@@ -294,8 +308,8 @@ def main():
         print(f"[Pi] Fatal Error occured: {e}")
     finally:
         print(f"[Pi] Reach max run time ({RUN_DURATION}). Send DONE to ESP32.")
-        print("DONE signal sent. Program will shutdown soon.")
-        print("Program exiting normally")
+        print("[Pi] DONE signal sent. Program will shutdown soon.")
+        print("[Pi] Program exiting normally")
         print("==== Finder System program ended ====")
         esp.close()
         GPIO.output(DONE_GPIO , GPIO.HIGH)
