@@ -301,6 +301,8 @@ def main():
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
             msgcount += 1
+            if msgcount > 10:
+                msgcount = 0
 
     except KeyboardInterrupt:
         print("[Pi] Interrupt by user.")
