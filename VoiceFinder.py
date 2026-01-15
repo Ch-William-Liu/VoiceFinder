@@ -271,13 +271,14 @@ def main():
             sf.write(audioFilename , myAudio , fs , subtype = "PCM_16")
             del(myAudio)
 
-            msg_to_send = f"{cal_mean_angle : 3.2f},{sensor_angle : 3.2f},{true_angle : 3.2f}"
+            msg_to_send = f"{cal_mean_angle:3.2f},{sensor_angle:3.2f},{true_angle:3.2f}"
             st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
             print("[Pi] Sending message from Pi.")
             print("=" * 50)
             elasped_time = time.time() - start_time
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
+            msgcount += 1
 
     except KeyboardInterrupt:
         print("[Pi] Interrupt by user.")
