@@ -32,13 +32,13 @@ def checkSoundcard():
     '''
     check soundcard every time program start
     '''
-    print("Checking Audioinjector Octo soundcard...")
+    print("[Pi] Checking Audioinjector Octo soundcard...")
     checkResult = subprocess.run(["arecord" , "-l"] , capture_output = True , text = True)
     stderr = checkResult.stderr.strip()
     stdout = checkResult.stdout.strip()
 
     if "no soundcards found" in stderr.lower():
-        print("No soundcard is found. System would reboot.")
+        print("[Pi] No soundcard is found. System would reboot.")
         os.system("sudo reboot")
         sys.exit(1)
 
@@ -50,14 +50,14 @@ def recordSetup(device_name : str = "audininjector-octo-soundcard"):
     '''
     try:
         sd.default.device = device_name
-        print("Setting default record to Audioinjector Octo.")
+        print("[Pi] Setting default record to Audioinjector Octo.")
     except Exception as e:
-        raise RuntimeError(f"Cannot set device to {device_name} , {e}")
-    print("Warm-up recording.")
+        raise RuntimeError(f"[Pi] Cannot set device to {device_name} , {e}")
+    print("[Pi] Warm-up recording.")
     sd.rec(int(5 * fs) , samplerate = fs , channels = 8)
     sd.wait()
     time.sleep(0.5)
-    print("Dummy recording done.")
+    print("[Pi] Dummy recording done.")
 
 def multiRecord(channel : int = 8 , duration : float = 10.0):
     '''
@@ -67,10 +67,10 @@ def multiRecord(channel : int = 8 , duration : float = 10.0):
     :param duration: duration of audio file
     :type duration: float
     '''
-    print(f"Start recording for {duration} second ...")
+    print(f"[Pi] Start recording for {duration} second ...")
     audio = sd.rec(int(duration * fs) , samplerate = fs , channels = channel , dtype = "float32")
     sd.wait()
-    print("Recorded.")
+    print("[Pi] Recorded.")
 
     return audio
 
@@ -114,7 +114,7 @@ neighborPairs = [(1 , 2) , (2 , 4) , (1 , 3) , (3 , 4)]
 
 # function to calculate angle from TDOA
 def calculateAngle(delta_t , d , C , use_cos = False):
-    print("Calculating angle...")
+    print("[Pi] Calculating angle...")
     val = (delta_t * C) / d                 # calculate the value of trigonometric function
     val = np.clip(val , -1.0 , 1.0)        # clip the value to avoid error
     phiRad = math.acos(val) if use_cos else math.asin(val)    # calculate the angle in radian
@@ -260,14 +260,14 @@ def main():
 
             myAudio = multiRecord()
 
-            print("Proccessing audio file...")
+            print("[Pi] Proccessing audio file...")
             _ , _ , _ , cal_mean_angle , _ = processFile(myAudio)
             sensor_angle = esp.get_mean()
             true_angle = (cal_mean_angle + sensor_angle + dec) % 360
-            print("Processed.")
+            print("[Pi] Processed.")
             print(f"\nCal: {cal_mean_angle : 3.2f}\tSensor: {sensor_angle : 3.2f}\tTrue: {true_angle : 3.2f}")
             logCsv(timeNow , cal_mean_angle , sensor_angle , true_angle)
-            print(f"Saving audio file as {audioFilename}")
+            print(f"[Pi] Saving audio file as {audioFilename}")
             sf.write(audioFilename , myAudio , fs , subtype = "PCM_16")
             del(myAudio)
 
@@ -285,8 +285,8 @@ def main():
     except Exception as e:
         print(f"[Pi] Fatal Error occured: {e}")
     finally:
-        print("DONE signal sent. Program will shutdown soon.")
-        print("Program exiting normally")
+        print("[Pi] DONE signal sent. Program will shutdown soon.")
+        print("[Pi] Program exiting normally")
         print("==== Finder System program ended ====")
         esp.close()
 
