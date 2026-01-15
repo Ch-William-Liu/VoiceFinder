@@ -259,10 +259,10 @@ def logCsv(timestamp , cal_ang , sensor_ang , true_ang):
 # main
 # ====================================
 def main():
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')}  ==== VoiceFinder system start. ====")
     checkSoundcard()
     recordSetup()
 
-    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} VoiceFinder system start.")
     esp = read_ESP32.ESPHeadingReader(ser = serESP)
     start_time = time.time()
 
@@ -313,7 +313,7 @@ def main():
         print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Reach max run time ({RUN_DURATION}). Send DONE to ESP32.")
         print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} DONE signal sent. Program will shutdown soon.")
         print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Program exiting normally")
-        print("==== Finder System program ended ====")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} ==== Finder System program ended ====")
         esp.close()
         GPIO.output(DONE_GPIO , GPIO.HIGH)
         GPIO.output(RED_LED , GPIO.LOW)
