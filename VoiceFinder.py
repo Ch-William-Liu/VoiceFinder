@@ -32,13 +32,13 @@ def checkSoundcard():
     '''
     check soundcard every time program start
     '''
-    print("[Pi] Checking Audioinjector Octo soundcard...")
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Checking Audioinjector Octo soundcard...")
     checkResult = subprocess.run(["arecord" , "-l"] , capture_output = True , text = True)
     stderr = checkResult.stderr.strip()
     stdout = checkResult.stdout.strip()
 
     if "no soundcards found" in stderr.lower():
-        print("[Pi] No soundcard is found. System would reboot.")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} No soundcard is found. System would reboot.")
         os.system("sudo reboot")
         sys.exit(1)
 
@@ -50,14 +50,14 @@ def recordSetup(device_name : str = "audioinjector-octo-soundcard"):
     '''
     try:
         sd.default.device = device_name
-        print("[Pi] Setting default record to Audioinjector Octo.")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Setting default record to Audioinjector Octo.")
     except Exception as e:
-        raise RuntimeError(f"[Pi] Cannot set device to {device_name} , {e}")
-    print("[Pi] Warm-up recording.")
+        raise RuntimeError(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Cannot set device to {device_name} , {e}")
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Warm-up recording.")
     sd.rec(int(5 * fs) , samplerate = fs , channels = 8)
     sd.wait()
     time.sleep(0.5)
-    print("[Pi] Dummy recording done.")
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Dummy recording done.")
 
 def multiRecord(channel : int = 8 , duration : float = 10.0):
     '''
@@ -67,10 +67,10 @@ def multiRecord(channel : int = 8 , duration : float = 10.0):
     :param duration: duration of audio file
     :type duration: float
     '''
-    print(f"[Pi] Start recording for {duration} second ...")
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Start recording for {duration} second ...")
     audio = sd.rec(int(duration * fs) , samplerate = fs , channels = channel , dtype = "float32")
     sd.wait()
-    print("[Pi] Recorded.")
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Recorded.")
 
     return audio
 
@@ -85,6 +85,7 @@ def getLocalDeclination(lat : float , lon : float):
     :param lon: coodrinate from st6100 , ddmm.mmmm
     :type lon: float
     '''
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Getting declination from current coorinate.")
     lat_d = int(lat // 100)
     lat_m = lat % 100
     lon_d = int(lon // 100)
@@ -128,7 +129,6 @@ neighborPairs = [(1 , 2) , (2 , 4) , (1 , 3) , (3 , 4)]
 
 # function to calculate angle from TDOA
 def calculateAngle(delta_t , d , C , use_cos = False):
-    print("[Pi] Calculating angle...")
     val = (delta_t * C) / d                 # calculate the value of trigonometric function
     val = np.clip(val , -1.0 , 1.0)        # clip the value to avoid error
     phiRad = math.acos(val) if use_cos else math.asin(val)    # calculate the angle in radian
@@ -150,9 +150,9 @@ def processFile(audio):
     read_data = audio
     read_fs = fs
     if read_fs != cal_fs:
-        raise ValueError(f"Sample rate mismatch: expected {cal_fs} Hz, got {read_fs} Hz")
+        raise ValueError(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sample rate mismatch: expected {cal_fs} Hz, got {read_fs} Hz")
     if read_data.shape[1] < 4:
-        raise ValueError("Insufficient channels in the audio file. At least 4 channels are required.")
+        raise ValueError(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Insufficient channels in the audio file. At least 4 channels are required.")
     
     dataChannel = {
         1 : read_data[int(0.3 * cal_fs) : , 0],
@@ -195,6 +195,7 @@ def processFile(audio):
     corrected_angles = {}
     vectors = []
     formulas = []
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Calculating angle...")
     for mic_a , mic_b in neighborPairs:
         corr = sig.correlate(dataChannel[mic_a] , dataChannel[mic_b] , mode = "full")
         delays = np.arange(-len(dataChannel[mic_a]) + 1 , len(dataChannel[mic_a]))
@@ -253,7 +254,7 @@ def main():
     checkSoundcard()
     recordSetup()
 
-    print("[Pi] VoiceFinder system start.")
+    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} VoiceFinder system start.")
     esp = read_ESP32.ESPHeadingReader(ser = serESP)
     start_time = time.time()
 
@@ -274,20 +275,20 @@ def main():
 
             myAudio = multiRecord()
 
-            print("[Pi] Proccessing audio file...")
+            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Proccessing audio file...")
             _ , _ , _ , cal_mean_angle , _ = processFile(myAudio)
             sensor_angle = esp.get_mean()
             true_angle = (cal_mean_angle + sensor_angle + dec) % 360
-            print("[Pi] Processed.")
+            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Processed.")
             print(f"\nCal: {cal_mean_angle : 3.2f}\tSensor: {sensor_angle : 3.2f}\tTrue: {true_angle : 3.2f}")
             logCsv(timeNow , cal_mean_angle , sensor_angle , true_angle)
-            print(f"[Pi] Saving audio file as {audioFilename}")
+            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Saving audio file as {audioFilename}")
             sf.write(audioFilename , myAudio , fs , subtype = "PCM_16")
             del(myAudio)
 
             msg_to_send = f"{cal_mean_angle:3.2f},{sensor_angle:3.2f},{true_angle:3.2f}"
             st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
-            print("[Pi] Sending message from Pi.")
+            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
             print("=" * 50)
             elasped_time = time.time() - start_time
             if elasped_time >= RUN_DURATION:
@@ -297,12 +298,12 @@ def main():
                 msgcount = 0
 
     except KeyboardInterrupt:
-        print("[Pi] Interrupt by user.")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Interrupt by user.")
     except Exception as e:
-        print(f"[Pi] Fatal Error occured: {e}")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Fatal Error occured: {e}")
     finally:
-        print("[Pi] DONE signal sent. Program will shutdown soon.")
-        print("[Pi] Program exiting normally")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} DONE signal sent. Program will shutdown soon.")
+        print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Program exiting normally")
         print("==== Finder System program ended ====")
         esp.close()
 
