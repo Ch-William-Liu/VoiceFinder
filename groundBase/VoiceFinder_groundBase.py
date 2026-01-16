@@ -51,7 +51,7 @@ class Credential:
     type_rec : int  # 1: Text, 2: ASC_HEX, 3: Base64
 
 DEVICE_ID_LIST : List[Credential] = [
-    Credential("echoing_ocean_05" , "echoing_ocean__05" , 1)
+    Credential("echoing_ocean_05" , "echoing_ocean_05" , 1)
 ]
 
 # ====================================
@@ -74,13 +74,13 @@ def path_angles(user : str) -> str:
     '''HSON array file for parsed angle records.'''
     return os.path.join(ANGLES_DIR , f"{user}_angles.json")
 
-def append_ndjson(filepath : str , data : Dict[str : Any]) -> None:
+def append_ndjson(filepath : str , data : Dict[str , Any]) -> None:
     '''Append a single JSON line (NDJSON) to a file.'''
     os.makedirs(os.path.dirname(filepath) , exist_ok = True)
     with open(filepath , "a" , encoding = "utf-8") as f:
         f.write(json.dumps(data , ensure_ascii = False) + "\n")
 
-def append_json_array(filepath : str , data : Dict[str : Any]) -> None:
+def append_json_array(filepath : str , data : Dict[str , Any]) -> None:
     '''Append an object to a JSON array file (create if absent).'''
     os.makedirs(os.path.dirname(filepath) , exist_ok = True)
     if not os.path.exists(filepath):

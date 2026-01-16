@@ -267,7 +267,7 @@ def main():
     start_time = time.time()
 
     closeFlag = False
-    msgcount = 0
+    msgcount = 700
     try:
         while not closeFlag:
             print("\n")
@@ -303,8 +303,8 @@ def main():
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
             msgcount += 1
-            if msgcount > 10:
-                msgcount = 0
+            if msgcount > 710:
+                msgcount = 700
 
     except KeyboardInterrupt:
         print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Interrupt by user.")

@@ -125,8 +125,9 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
             min_code = 1
 
             # --- Check and clear msg_id befor sending ---
-            momc_cmd = f"AT%MOMC=VF{msg_id:03}\r"
-            momd_cmd = f"AT%MOMD=VF{msg_id:03}\r"
+            momc_cmd = f"AT%MOMC={msg_id:03}\r"
+            momd_cmd = f"AT%MOMD={msg_id:03}\r"
+            check_cmd = "ATS81?\r"
 
             print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending: {momc_cmd.strip()}")
             ser.write(momc_cmd.encode("utf-8"))
@@ -134,6 +135,7 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
             response = ser.read_all().decode(errors = "ignore").strip()
             if response:
                 print(f"[AT] Response: {response}")
+
             
             print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending: {momd_cmd.strip()}")
             ser.write(momd_cmd.encode("utf-8"))
@@ -143,7 +145,7 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
                 print(f"[AT] Response: {response}")
 
             # Compose AT command
-            at_command = f'AT%MOMT=VF{msg_id},{service_class},{lifetime},{msg_len},{data_format},{sin},{min_code},"{full_msg}"\r'
+            at_command = f'AT%MOMT={msg_id},{service_class},{lifetime},{msg_len},{data_format},{sin},{min_code},"{full_msg}"\r'
 
             print(f"[AT] {datetime.now().strftime('%H:%M:%S')} Sending command: {at_command.strip()}")
             
@@ -157,6 +159,12 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
                 line = line.strip()
                 if line:
                     print(f"[AT] {datetime.now().strftime('%H:%M:%S')} {line}")
+                    if line.startswith("ERR"):
+                        ser.write(check_cmd.encode("utf-8"))
+                        time.sleep(1.5)
+                        resp_chk = ser.read_all().decode(errors = "ignore").strip()
+                        if resp_chk:
+                            print(f"[AT] ATS81? response: {resp_chk}")
 
     except serial.SerialException as e:
         print(f"Serial error : {e}")
