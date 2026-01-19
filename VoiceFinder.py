@@ -306,7 +306,7 @@ def main():
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
             
-            if msgcount > 710:
+            if msgcount > 707:
                 msgcount = 700
 
     except KeyboardInterrupt:

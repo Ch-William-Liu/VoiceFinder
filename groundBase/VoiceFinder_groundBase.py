@@ -23,7 +23,7 @@ import socket
 import threading
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional , Dict , Any , List
+from typing import Optional, Dict, Any, List
 
 # ====================================
 # Basic Setting
@@ -66,38 +66,19 @@ def safe_print(*args , **kwargs):
 # ====================================
 # File helpers
 # ====================================
-def path_raw(user : str) -> str:
-    '''NDJSON for raw records.'''
-    return os.path.join(ANGLES_DIR , f"{user}_raw.json")
+def path_raw(user: str) -> str:
+    """NDJSON file for raw records (append-only)."""
+    return os.path.join(ANGLES_DIR, f"{user}_raw.ndjson")
 
-def path_angles(user : str) -> str:
-    '''HSON array file for parsed angle records.'''
-    return os.path.join(ANGLES_DIR , f"{user}_angles.json")
+def path_angles_ndjson(user: str) -> str:
+    """NDJSON file for parsed angle records (append-only)."""
+    return os.path.join(ANGLES_DIR, f"{user}_angles.ndjson")
 
-def append_ndjson(filepath : str , data : Dict[str , Any]) -> None:
-    '''Append a single JSON line (NDJSON) to a file.'''
-    os.makedirs(os.path.dirname(filepath) , exist_ok = True)
-    with open(filepath , "a" , encoding = "utf-8") as f:
-        f.write(json.dumps(data , ensure_ascii = False) + "\n")
-
-def append_json_array(filepath : str , data : Dict[str , Any]) -> None:
-    '''Append an object to a JSON array file (create if absent).'''
-    os.makedirs(os.path.dirname(filepath) , exist_ok = True)
-    if not os.path.exists(filepath):
-        with open(filepath , "w" , encoding = "utf-8") as f:
-            json.dump([data] , f , ensure_ascii = False , indent = 2)
-    else:
-        with open(filepath , "r+" , encoding = "utf-8") as f:
-            try:
-                arr = json.load(f)
-                if not isinstance(arr , list):
-                    arr = [arr]
-            except json.JSONDecodeError:
-                arr = []
-                arr.append(data)
-                f.seek(0)
-                json.dump(arr , f , ensure_ascii = False , indent = 2)
-                f.truncate()
+def append_ndjson(filepath: str, data: Dict[str, Any]) -> None:
+    """Append a single JSON line (NDJSON) to a file."""
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 # ====================================
 # Parsing helpers
@@ -120,59 +101,71 @@ def split_recv_lines(data_bytes : bytes) -> List[str]:
     s = s.replace("\r\n" , "\n").replace("\r" , "\n")
     return [ln.strip() for ln in s.split("\n") if ln.strip()]
 
-def parse_ok_angles_line(line: str) -> Optional[Dict[str , Any]]:
-    '''
+def parse_ok_angles_line(line: str) -> Optional[Dict[str, Any]]:
+    """
     Parse lines like:
-        Ok,<server_time>,<lat_dmm>,<lon_dmm>,<cal>,<sensor>,<true>[,...ignored]
-    Return a dict on success, or None if the line is not parseable.
-    '''
+      OK,<server_time>,<lat_dmm>,<lon_dmm>,<angle_1>,...,<angle_10>
+    Returns a dict with an 'angles' list (variable length, empties ignored),
+    or None if the line is not parseable.
+    """
     if not line.startswith("OK,"):
         return None
+
     parts = [p.strip() for p in line.split(",")]
-    if len(parts) < 7:
+    if len(parts) < 5:
         return None
-    
-    # Unpack the first 7 fields
-    _ , server_time , lat_s , lon_s , cal_s , sensor_s , true_s , *rest = parts
+
+    # first four tokens must exist
+    _, server_time, lat_s, lon_s, *rest = parts
     try:
         lat_dec = gga_to_decimal(float(lat_s))
         lon_dec = gga_to_decimal(float(lon_s))
-        cal_angle = float(cal_s)
-        sensor_angle = float(sensor_s)
-        true_angle = float(true_s)
     except ValueError:
         return None
-    
-    return{
+
+    # parse angles: ignore empty tokens (handles ",,")
+    angles: List[float] = []
+    for tok in rest:
+        if tok == "":
+            continue
+        try:
+            angles.append(float(tok))
+        except ValueError:
+            # ignore non-numeric tail if any
+            pass
+
+    # keep at most 10 angles (as per your format), but allow fewer
+    if len(angles) == 0:
+        return None
+    angles = angles[:10]
+
+    return {
         "category": "angles",
-        "server_time": server_time,             # keep the server time string as-is
+        "server_time": server_time,
         "lat": lat_dec,
         "lon": lon_dec,
-        "cal_angle": cal_angle,
-        "sensor_angle": sensor_angle,
-        "true_angle": true_angle,
+        "angles": angles,  # e.g., [angle_1, angle_2, ...]
         "received_at": datetime.utcnow().isoformat() + "Z",
         "raw": line,
     }
-
 # ====================================
 # Work thread
 # ====================================
-def recv_msg_task(device: Credential , stop_event: threading.Event):
-    '''
+def recv_msg_task(device: Credential, stop_event: threading.Event):
+    """
     Per-device worker:
-    - Connect to the server.
+    - Connects to the server.
     - Periodically sends AT+GRMG=<user>,<passwd>,<type>.
-    - Parses responses and writes to files.
-    - If the line  "NULL" is received, triggers a global stop and exits.
-    '''
+    - Parses responses and writes to files (NDJSON append-only).
+    - When the line 'NULL' is received, DO NOT exit; just print a tip.
+    """
     backoff = BASE_BACKOFF
-    while not  stop_event.is_set():
+    while not stop_event.is_set():
         sock = None
         try:
-            sock = socket.socket(socket.AF_INET , socket.SOCK_STREAM)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(CONNECT_TIMEOUT)
-            sock.connect((HOST , PORT))
+            sock.connect((HOST, PORT))
             sock.settimeout(RECV_TIMEOUT)
             safe_print(f"[{device.user}] connected to {HOST}:{PORT}")
             backoff = BASE_BACKOFF
@@ -185,6 +178,7 @@ def recv_msg_task(device: Credential , stop_event: threading.Event):
                     data = sock.recv(4096)
                 except socket.timeout:
                     safe_print(f"[{device.user}] recv timeout.")
+                    data = b""
                 except socket.error as e:
                     safe_print(f"[{device.user}] recv error: {e}")
                     raise
@@ -195,23 +189,21 @@ def recv_msg_task(device: Credential , stop_event: threading.Event):
 
                 for line in split_recv_lines(data):
                     if line == "NULL":
-                        safe_print(f"[{device.user}] received NULL -> shutting down.")
-                        stop_event.set()
-                        return                      # sxit this worker immediately (socket close in finally)
+                        safe_print(f"[{device.user}] end of batch (NULL). "
+                                   f"Tip: press Ctrl+C to stop the program.")
+                        # do NOT stop; just finish this batch
+                        continue
 
                     if line.startswith("ER"):
                         safe_print(f"[{device.user}] server error: {line}")
                         continue
 
                     rec = parse_ok_angles_line(line)
-
                     if rec:
-                        append_ndjson(path_raw(device.user) , rec)
-                        append_json_array(path_angles(device.user) , rec)
-                        safe_print(
-                            f"[{device.user}] saved angles: "
-                            f"cal={rec['cal_angle']} , sensor={rec['sensor_angle']} , true={rec['true_angle']}"
-                        )
+                        # append to raw & angles NDJSON (stacking)
+                        append_ndjson(path_raw(device.user), rec)
+                        append_ndjson(path_angles_ndjson(device.user), rec)
+                        safe_print(f"[{device.user}] saved angles: {rec['angles']}")
                     else:
                         safe_print(f"[{device.user}] skip: {line}")
 
@@ -220,17 +212,14 @@ def recv_msg_task(device: Credential , stop_event: threading.Event):
         except Exception as e:
             safe_print(f"[{device.user}] error: {e} (backoff {backoff}s)")
             time.sleep(backoff)
-            backoff = min(backoff * 2 , MAX_BACKOFF)
-
+            backoff = min(backoff * 2, MAX_BACKOFF)
         finally:
             if sock:
                 try:
                     sock.close()
                 except Exception:
                     pass
-
     safe_print(f"[{device.user}] worker stopped.")
-
 # ====================================
 # main
 # ====================================
@@ -238,7 +227,7 @@ def main():
     stop_event = threading.Event()
     threads: List[threading.Thread] = []
     for dev in DEVICE_ID_LIST:
-        t = threading.Thread(target = recv_msg_task , args = (dev , stop_event) , daemon = True)
+        t = threading.Thread(target=recv_msg_task, args=(dev, stop_event), daemon=True)
         t.start()
         threads.append(t)
 
@@ -251,7 +240,7 @@ def main():
         stop_event.set()
 
     for t in threads:
-        t.join(timeout = 5.0)
+        t.join(timeout=5.0)
     safe_print("Exited.")
 
 if __name__ == "__main__":
