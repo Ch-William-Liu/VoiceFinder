@@ -299,13 +299,19 @@ def main():
                 print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
                 msgcount += 1
                 buffer = []
+            else:
+                print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Current buffer length: {len(buffer)} , wait buffer length = 10 to send message.")
             
-            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Current buffer length: {len(buffer)} , wait buffer length = 10 to send message.")
-            print("=" * 50)
             elasped_time = time.time() - start_time
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
-            
+                msg_to_send = ",".join(f"{v:.2f}" for v in buffer)
+                st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
+                print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Reach max runtime. Sending angles from buffer.")
+                print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
+                msgcount += 1
+                buffer = []
+            print("=" * 50)
             if msgcount > 707:
                 msgcount = 700
 
