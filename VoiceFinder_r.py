@@ -27,7 +27,7 @@ serST6100 = serial.Serial(port = "/dev/ttyUSB0" , baudrate = 9600 , timeout = 1)
 serESP = serial.Serial(port = "/dev/serial0" , baudrate = 115200 , timeout = 1)
 
 DONE_GPIO = 27                                      # goes to PIN34 on ESP32
-RUN_DURATION = 525                                  # take 60 second as test
+RUN_DURATION = 30 * 60 + 120
 RED_LED = 17                                        # RED LED pin indicate that Raspberry is booted
 
 GPIO.setmode(GPIO.BCM)
@@ -310,13 +310,14 @@ def main():
             elasped_time = time.time() - start_time
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
-                msg_to_send = ",".join(f"{v:.2f}" for v in buffer)
-                st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
-                print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Reach max runtime. Sending angles from buffer.")
-                print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
-                msgcount += 1
-                buffer = []
-            print("=" * 50)
+                if buffer:
+                    msg_to_send = ",".join(f"{v:.2f}" for v in buffer)
+                    st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
+                    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Reach max runtime. Sending angles from buffer.")
+                    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
+                    msgcount += 1
+                    buffer = []
+            print("=" * 40)
             if msgcount > 707:
                 msgcount = 700
 
