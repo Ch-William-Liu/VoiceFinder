@@ -49,14 +49,15 @@ class ESPHeadingReader:
             print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Incomplete message: " , line)
             return None
         
-        ts = parts[0]
+        # ts = parts[0]
 
         try:
             nums = [float(x) for x in parts[1 : 15]]
+            now_ts = datetime.now().strftime("%y/%m/%d %H:%M:%S")
         except ValueError as e:
             print(f"[ESP32 Parsing Error] {datetime.now().strftime('%H:%M:%S')}: " , e)
 
-        row = [ts] + nums
+        row = [now_ts] + nums
         return row
     
     def _append_log(self , row):
