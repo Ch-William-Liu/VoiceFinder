@@ -290,10 +290,11 @@ def main():
             # msg_to_send = f"{cal_mean_angle:3.2f},{sensor_angle:3.2f},{true_angle:3.2f}"
             buffer.append(true_angle)
 
-            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Buffer: ", *buffer )
+            print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Buffer: ", *buffer)
 
             if len(buffer) >= 10:
                 msg_to_send = ",".join(f"{v:.2f}" for v in buffer)
+                print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} message:{msg_to_send}")
                 # st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
                 print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
                 msgcount += 1
