@@ -112,7 +112,7 @@ def st6100_send_msg(msg_id : int , msg : str , port : str = "/dev/ttyUSB0",
                 full_msg = f"N,N,{msg}"
             else:
                 # Prefix GPS coordinates to the message
-                full_msg = f"{gps_info[0]:2.4f},{gps_info[2]:3.4f},{msg}"
+                full_msg = f"{float(gps_info[0]):2.4f},{float(gps_info[2]):3.4f},{msg}"
 
             # Calculate message length
             msg_len = len(full_msg.encode("utf-8")) + 2
