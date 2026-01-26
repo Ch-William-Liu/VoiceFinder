@@ -43,6 +43,7 @@ class ESPHeadingReader:
             print(f"[ESP32] {datetime.now().strftime('%H:%M:%S')} Initialize message: " , line)
             return None
         
+        line = line.replace('\r', '').strip()
         parts = [p.strip() for p in line.split(",")]
 
         if len(parts) < 15:
@@ -51,9 +52,11 @@ class ESPHeadingReader:
         
         # ts = parts[0]
 
+        now_ts = datetime.now().strftime("%y/%m/%d %H:%M:%S")
+
         try:
             nums = [float(x) for x in parts[1 : 15]]
-            now_ts = datetime.now().strftime("%y/%m/%d %H:%M:%S")
+            
         except ValueError as e:
             print(f"[ESP32 Parsing Error] {datetime.now().strftime('%H:%M:%S')}: " , e)
 
