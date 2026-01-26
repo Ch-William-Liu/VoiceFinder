@@ -306,7 +306,7 @@ def main():
             if elasped_time >= RUN_DURATION:
                 closeFlag = True
                 if buffer:
-                    msg_to_send = ",".join(f"{v:.2f}" for v in buffer)
+                    msg_to_send = ",".join(f"{float(v):.2f}" for v in buffer)
                     st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
                     print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Reach max runtime. Sending angles from buffer.")
                     print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
