@@ -270,7 +270,7 @@ def main():
             timeNow = time.strftime("%Y%m%d%H%M%S" ,  time.localtime())
             audioFilename = timeNow + ".wav"
 
-            currentCoordinate = st6100_send_msg.get_gps_info(serST6100 , retries = 20 , wait_time = 120 , stale_secs = 60)
+            currentCoordinate = st6100_send_msg.get_gps_info(serST6100 , retries = 20 , wait_time = 45 , stale_secs = 2)
             localLat = float(currentCoordinate[0])      #ddmm.mmmm
             localLon = float(currentCoordinate[2])      #ddmm.mmmm
 
