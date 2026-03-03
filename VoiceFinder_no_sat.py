@@ -14,6 +14,23 @@ from datetime import datetime
 import csv
 import sys
 import serial
+
+import logging
+
+logging.basicConfig(filename="Finder_work.log" , level=logging.INFO, format="&(asctime)s | %(message)s" , encoding="utf-8")
+
+class PrintToLog:
+    def write(self , message):
+        message = message.strip()
+        if message:
+            logging.info(message)
+    
+    def flush(self):
+        pass
+
+sys.stdout = PrintToLog()
+sys.stderr = PrintToLog()
+
 import read_ESP32
 
 
@@ -308,7 +325,7 @@ def main():
                 closeFlag = True
                 if buffer:
                     msg_to_send = ",".join(f"{float(v):.2f}" for v in buffer)
-                    st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
+                    # st6100_send_msg.st6100_send_msg(msg_id=msgcount , msg = msg_to_send)
                     print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Reach max runtime. Sending angles from buffer.")
                     print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sending message from Pi to satellite.")
                     msgcount += 1
