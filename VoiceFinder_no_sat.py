@@ -14,23 +14,6 @@ from datetime import datetime
 import csv
 import sys
 import serial
-
-import logging
-
-logging.basicConfig(filename="Finder_work.log" , level=logging.INFO, format="&(asctime)s | %(message)s" , encoding="utf-8")
-
-class PrintToLog:
-    def write(self , message):
-        message = message.strip()
-        if message:
-            logging.info(message)
-    
-    def flush(self):
-        pass
-
-sys.stdout = PrintToLog()
-sys.stderr = PrintToLog()
-
 import read_ESP32
 
 
@@ -120,7 +103,8 @@ def getLocalDeclination(lat : float , lon : float):
 # Acoustic array calculate
 # ====================================
 cal_fs = fs
-cal_soundspeed = 1520
+# cal_soundspeed = 1520
+cal_soundspeed = 340
 # spacing of hyddrophone array
 micSpacing = {
     (1 , 2) : 0.325,
@@ -155,6 +139,13 @@ def generateChirp(f_low = 3000 , f_high = 7000 , chirp_duration = 0.5):
     t= np.linspace(0 , chirp_duration , int(cal_fs * chirp_duration) , endpoint = False)
     return sig.chirp(t , f0 = f_low , f1 = f_high , t1 = chirp_duration , method = "linear")
 
+# used already known whistle to test 
+def detectWhistle(signal):
+    ref_whistle = sf.read("210909_bandpass_specsub.wav")
+    corr = sig.correlate(signal , ref_whistle , mode="valid")
+    peadIdx = np.argmax(np.abs(corr))
+    return peadIdx
+
 # detect the chirp
 def detectChirp(signal , template):
     corr = sig.correlate(signal , template , mode = "valid")
@@ -184,7 +175,8 @@ def processFile(audio):
 
     # detect chirp arrival time
     template_chirp = generateChirp()
-    arrivals_sample = {k : detectChirp(v , template_chirp) for k , v in dataChannel.items()}
+    # arrivals_sample = {k : detectChirp(v , template_chirp) for k , v in dataChannel.items()}
+    arrivals_sample = {k : detectWhistle(v) for k , v in dataChannel.items()}
     sortedMic = sorted(arrivals_sample.items() , key = lambda x: x[1])
     arrival_order = [[f"Mic{m} ({s / cal_fs : .4f} s)" for m , s in sortedMic]]
 
