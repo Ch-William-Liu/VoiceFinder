@@ -1,9 +1,21 @@
-import serial
-import st6100_send_msg
-import read_ESP32
+# plot and save
 
-serST6100 = serial.Serial(port = "/dev/ttyUSB0" , baudrate = 9600 , timeout = 1)
+import sounddevice as sd
+import soundfile as sf
+import matplotlib.pyplot as plt
 
-GPSinfo = st6100_send_msg.get_gps_info(ser = serST6100 , retries = 20 , wait_time = 120 , stale_secs = 60)
 
-print(GPSinfo , sep = ",")
+filename = "filename"
+data , fs = sf.read(filename)
+
+
+for c in range(7):
+    plt.figure()
+    plt.specgram(data[:,c] , 1024 , fs)
+    plt.jet()
+    plt.ylim([5000,25000])
+    plt.clim([-125,-25])
+    channel_name = "Channel-"+str(c+1)
+    plt.title(channel_name)
+    plt.savefig(filename+"_"+channel_name+".png")
+
