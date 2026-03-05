@@ -14,8 +14,9 @@ for c in range(7):
     plt.specgram(data[:,c] , 1024 , fs)
     plt.jet()
     plt.ylim([5000,25000])
-    plt.clim([-125,-25])
+    plt.clim([-150,-25])
+    plt.colorbar()
     channel_name = "Channel-"+str(c+1)
     plt.title(channel_name)
-    plt.savefig(filename+"_"+channel_name+".png")
+    plt.savefig(filename[:-4]+"_"+channel_name+".png")
 
