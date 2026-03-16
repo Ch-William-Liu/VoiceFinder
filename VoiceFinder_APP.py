@@ -1,5 +1,5 @@
 # !/usr/bin/env python3
-# -*- coding: uft-8 -*-
+# -*- coding: utf-8 -*-
 
 import math
 import os
@@ -297,10 +297,10 @@ class FinderGUI:
         main_frame.pack(fill="both" , expand=True)
 
         left_frame = tk.Frame(main_frame , bd = 1 , relief="solid")
-        left_frame.pack(fill="both" , expand=True)
+        left_frame.pack(side="left", fill="both", expand=True)
 
         right_frame = tk.Frame(main_frame , bd = 1 , relief="solid")
-        right_frame.pack(fill="both" , expand=True)
+        right_frame.pack(side="right" , fill="both" , expand=True)
 
         self.left_hint = tk.Label(
             left_frame,
