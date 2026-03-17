@@ -152,94 +152,89 @@ def detectChirp(signal , template):
     peadIdx = np.argmax(np.abs(corr))
     return peadIdx
 
+def getSignedDelay(sig_a , sig_b):
+    corr = sig.correlate(sig_a , sig_b , mode="full")
+    delays = np.arange(-len(sig_a) + 1 , len(sig_a))
+    delay_sample = delays[np.argmax(np.abs(corr))]
+    delay_time = delay_sample / cal_fs
+    
+    return delay_sample , delay_time
+
 # main calculation function
 def processFile(audio):
     read_data = audio
     read_fs = fs
     if read_fs != cal_fs:
-        raise ValueError(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Sample rate mismatch: expected {cal_fs} Hz, got {read_fs} Hz")
+        raise ValueError(f"Sample rate mismatch: except: {cal_fs} Hz, got {read_fs} Hz.")
     if read_data.shape[1] < 4:
-        raise ValueError(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Insufficient channels in the audio file. At least 4 channels are required.")
+        raise ValueError("Insufficient channels in the audio. At least 4 channels are required.")
     
     dataChannel = {
         1 : read_data[int(0.3 * cal_fs) : , 0],
         2 : read_data[int(0.3 * cal_fs) : , 1],
         3 : read_data[int(0.3 * cal_fs) : , 2],
-        4 : read_data[int(0.3 * cal_fs) : , 3]
+        4 : read_data[int(0.3 * cal_fs) : , 3],
     }
 
     # bandpass filter design
-    b , a = sig.ellip(3, 3 , 50 , [3000 / (0.5 * cal_fs) , 7000 / (0.5 * cal_fs)] , btype = "bandpass")
+    b , a = sig.ellip(3 , 3 , 50, [5000/(0.5*cal_fs), 25000/(0.5*cal_fs)], btype="bandpass")
     for c in dataChannel:
         dataChannel[c] = sig.filtfilt(b , a , dataChannel[c])
 
     # detect chirp arrival time
-    template_chirp = generateChirp()
-    # arrivals_sample = {k : detectChirp(v , template_chirp) for k , v in dataChannel.items()}
-    arrivals_sample = {k : detectWhistle(v) for k , v in dataChannel.items()}
-    sortedMic = sorted(arrivals_sample.items() , key = lambda x: x[1])
+    arrivals_sample = {k: detectWhistle(v) for k , v in dataChannel.items()}
+    sortedMic = sorted(arrivals_sample.items(), key=lambda x: x[1])
     arrival_order = [[f"Mic{m} ({s / cal_fs : .4f} s)" for m , s in sortedMic]]
 
-    # get chitp section
+    # get signal section
     peak = min(arrivals_sample.values())
     startIdx = max(0 , peak)
-    endIdx = min(len(dataChannel[1]) , startIdx + cal_fs)
+    endIdx = min(len(dataChannel[1]) , startIdx + (2 * cal_fs))
 
     for c in dataChannel:
-        dataChannel[c] = dataChannel[c][startIdx : endIdx]
+        dataChannel[c] = dataChannel[c][startIdx:endIdx]
 
-    # detect signal arrive which mic first
-    # use mic1 as reference
-    delay_idx = []
-    delay_tmp = np.arange(-len(dataChannel[1]) + 1 , len(dataChannel[1]))
-    for c in dataChannel:
-        arrTime = sig.correlate(dataChannel[c] , dataChannel[1] , mode = "full")
-        arrIdx = delay_tmp[np.argmax(np.abs(arrTime))]
-        delay_idx.append(arrIdx)
-    earliest_mic = np.argmin(delay_idx) + 1
-    no_rotate = len(set(delay_idx)) == 1
+    # estimate x/y components directly from signed TDOA
+    d_h = micSpacing[(1 , 2)]
+    d_v = micSpacing[(1 , 3)]
 
-    # only consider the case of neighboring hydrophone pair
-    corrected_angles = {}
-    vectors = []
-    formulas = []
-    print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Calculating angle...")
-    for mic_a , mic_b in neighborPairs:
-        corr = sig.correlate(dataChannel[mic_a] , dataChannel[mic_b] , mode = "full")
-        delays = np.arange(-len(dataChannel[mic_a]) + 1 , len(dataChannel[mic_a]))
-        delay = delays[np.argmax(np.abs(corr))]
-        dt = np.abs(delay / cal_fs)
-        spacing = micSpacing[(mic_a , mic_b)]
-        use_cos = ((mic_a , mic_b) in verticalPairs) or ((mic_b , mic_a) in verticalPairs)
+    delay12_samp , tau12 = getSignedDelay(dataChannel[1] , dataChannel[2])          # top row
+    delay34_samp , tau34 = getSignedDelay(dataChannel[3] , dataChannel[4])          # bottom row
+    delay13_samp , tau13 = getSignedDelay(dataChannel[1] , dataChannel[3])          # left col
+    delay24_samp , tau24 = getSignedDelay(dataChannel[2] , dataChannel[4])          # rignt col
 
-        angle ,  val = calculateAngle(dt , spacing , cal_soundspeed , use_cos)
+    print(f"(1 , 2): {delay12_samp} samples , {tau12:.4f} s")
+    print(f"(3 , 4): {delay34_samp} samples , {tau34:.4f} s")
+    print(f"(1 , 3): {delay13_samp} samples , {tau13:.4f} s")
+    print(f"(2 , 4): {delay24_samp} samples , {tau24:.4f} s")
 
-        # rotate angle
-        if not no_rotate:
-            match earliest_mic:
-                case 1: corrected_angle = (360 - angle) % 360
-                case 2: corrected_angle = angle
-                case 3: corrected_angle = (180 + angle) % 360
-                case 4: corrected_angle = (90 + angle) % 360
-                case _: corrected_angle = angle
-        else:
-            corrected_angle = angle
-        
-        corrected_angles[(mic_a , mic_b)] = corrected_angle
+    # average horziontal and vertical TDOA
+    tau_x = (tau12 + tau34) / 2.0
+    tau_y = (tau13 + tau24) / 2.0
 
-        trig_func = "cos" if use_cos else "sin"
-        formula =  f"{trig_func}(Φ) = Δt × C₀ / d = {dt : .6f} × {cal_soundspeed} / {spacing} = {val:.4f} → Φ = {corrected_angle:.2f}°"
-        formulas.append(f"Mic{mic_a}→Mic{mic_b}: {formula}")
+    print(f"tau_x = {tau_x:.4f} s")
+    print(f"tau_y = {tau_y:.4f} s")
 
-        theta_rad = math.radians(corrected_angle)
-        vec = np.array([math.cos(theta_rad) , math.sin(theta_rad)]) if not use_cos else np.array([math.sin(theta_rad) , math.cos(theta_rad)])
-        vectors.append(vec)
+    # convert TDOA to directional components
+    ux = -(cal_soundspeed * tau_x) / d_h
+    uy = -(cal_soundspeed * tau_y) / d_v
 
-    # average angle and return
-    avg_vec = np.mean(vectors , axis = 0)
-    mean_angle = math.degrees(math.atan2(avg_vec[1] , avg_vec[0])) % 360
+    ux = np.clip(ux , -1.0 , 1.0)
+    uy = np.clip(uy , -1.0 , 1.0)
 
-    return corrected_angles , startIdx / cal_fs , arrival_order , mean_angle , formulas
+    print(f"ux = {ux:.4f}")
+    print(f"uy = {uy:.4f}")
+
+    mean_angle = (math.degrees(math.atan2(ux , uy)) + 360) % 360
+
+    corrected_angles = {
+        (1 , 2): math.degrees(math.asin(np.clip(-(cal_soundspeed * tau12) / d_h , -1.0 , 1.0))),
+        (3 , 4): math.degrees(math.asin(np.clip(-(cal_soundspeed * tau34) / d_h , -1.0 , 1.0))),
+        (1 , 3): math.degrees(math.asin(np.clip(-(cal_soundspeed * tau13) / d_v , -1.0 , 1.0))),
+        (2 , 4): math.degrees(math.asin(np.clip(-(cal_soundspeed * tau24) / d_v , -1.0 , 1.0)))
+    }
+
+    return corrected_angles , startIdx / cal_fs , arrival_order , mean_angle
 
 # ====================================
 # log
