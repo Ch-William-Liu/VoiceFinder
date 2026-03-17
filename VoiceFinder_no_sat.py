@@ -141,7 +141,7 @@ def generateChirp(f_low = 3000 , f_high = 7000 , chirp_duration = 0.5):
 
 # used already known whistle to test 
 def detectWhistle(signal):
-    ref_whistle = sf.read("210909_bandpass_specsub.wav")
+    ref_whistle , ref_whistle_fs= sf.read("210909_bandpass_specsub.wav")
     corr = sig.correlate(signal , ref_whistle , mode="valid")
     peadIdx = np.argmax(np.abs(corr))
     return peadIdx
