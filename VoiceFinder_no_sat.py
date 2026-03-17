@@ -280,7 +280,7 @@ def main():
             myAudio = multiRecord()
 
             print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Proccessing audio file...")
-            _ , _ , _ , cal_mean_angle , _ = processFile(myAudio)
+            _ , _ , _ , cal_mean_angle = processFile(myAudio)
             sensor_angle = esp.get_mean()
             true_angle = (cal_mean_angle + sensor_angle + dec) % 360
             print(f"[Pi] {datetime.now().strftime('%H:%M:%S')} Processed.")
